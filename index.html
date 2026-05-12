@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #07070f; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #1a1a2e; -webkit-tap-highlight-color: transparent; }
   #root { height: 100%; }
 </style>
 </head>
@@ -75,8 +75,8 @@ const C = {
   red:"#ff3355", redDim:"#1c0610", redBdr:"#6a1228",
   gold:"#ffc842", goldDim:"#2a1f00", goldBdr:"#7a5500",
   blue:"#4488ff", blueDim:"#001433", blueBdr:"#1144aa",
-  bg:"#07070f", surface:"#0d0d1c", surfaceUp:"#13132a",
-  bdr:"#1e1e30", bdrUp:"#2e2e48", text:"#e0e0ee", muted:"#55556a", hint:"#33334a",
+  bg:"#1a1a2e", surface:"#25254a", surfaceUp:"#2e2e58",
+  bdr:"#3d3d6a", bdrUp:"#4d4d80", text:"#ffffff", muted:"#a0a0cc", hint:"#7070aa",
 };
 
 const S = {
@@ -475,16 +475,16 @@ function App() {
               })}
             </div>
             {status==="denied"&&(
-              <div style={{background:"#2a060e",borderRadius:12,padding:14,textAlign:"center"}}>
+              <div style={{background:"#3d0f1a",borderRadius:12,padding:14,textAlign:"center"}}>
                 <div style={{color:C.red,fontSize:20,fontWeight:700,letterSpacing:1}}>⛔ NOT AUTHORIZED</div>
-                <div style={{color:"#ff6677",fontSize:13,marginTop:4}}>No access for Day {config.currentDay}</div>
+                <div style={{color:"#ffaaaa",fontSize:13,marginTop:4}}>No access for Day {config.currentDay}</div>
               </div>
             )}
             {status==="duplicate"&&(
               <div>
-                <div style={{background:"#2a1000",borderRadius:12,padding:14,textAlign:"center",marginBottom:8}}>
+                <div style={{background:"#3d2000",borderRadius:12,padding:14,textAlign:"center",marginBottom:8}}>
                   <div style={{color:C.orange,fontSize:20,fontWeight:700,letterSpacing:1}}>⚠️ ALREADY CHECKED IN</div>
-                  <div style={{color:"#ffaa55",fontSize:12,marginTop:5,fontFamily:"monospace"}}>at {new Date(ci.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
+                  <div style={{color:"#ffcc88",fontSize:12,marginTop:5,fontFamily:"monospace"}}>at {new Date(ci.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
                 </div>
                 <button style={{...S.ghost(),width:"100%"}} onClick={()=>undoCI(selected)}>Undo check-in</button>
               </div>
