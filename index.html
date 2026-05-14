@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#07070f">
+<meta name="theme-color" content="#2e2e50">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Check-In">
@@ -26,18 +26,6 @@
 <div id="root"></div>
 
 <script>
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  FIREBASE SETUP — do this once before sharing with guards   ║
-// ║                                                              ║
-// ║  1. Go to https://console.firebase.google.com               ║
-// ║  2. Add project → name it → disable Analytics → Create      ║
-// ║  3. Left sidebar → Realtime Database → Create Database       ║
-// ║  4. Choose "Start in test mode" → Enable                    ║
-// ║  5. ⚙ gear icon → Project settings → scroll to Your apps   ║
-// ║  6. Click </> (web) → register app → copy the config below  ║
-// ║  7. Replace all the PASTE_... values with your real values   ║
-// ╚══════════════════════════════════════════════════════════════╝
-
 const firebaseConfig = {
   apiKey:            "AIzaSyDehLIcrm6p5BWqQV87clfwm3hMTGnouEg",
   authDomain:        "security-app-3802e.firebaseapp.com",
@@ -47,40 +35,31 @@ const firebaseConfig = {
   messagingSenderId: "464296274089",
   appId:             "1:464296274089:web:2aa8380b5715e26df021b8"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const ROOT = 'secapp';
-
-function fbSet(path, val) { return db.ref(ROOT+'/'+path).set(val); }
-function fbListen(path, cb) {
-  const ref = db.ref(ROOT+'/'+path);
-  ref.on('value', s => cb(s.val()));
-  return () => ref.off('value');
-}
-
-// Register service worker for installability
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+function fbSet(path,val){return db.ref(ROOT+'/'+path).set(val);}
+function fbListen(path,cb){const ref=db.ref(ROOT+'/'+path);ref.on('value',s=>cb(s.val()));return()=>ref.off('value');}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 </script>
 
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
-const DEFAULT_CONFIG = { adminPin:"1234", currentDay:1, eventName:"My Event", setupDone:false };
+const {useState,useEffect,useRef}=React;
+const DEFAULT_CONFIG={adminPin:"1234",overseerPin:"5678",currentDay:1,eventName:"My Event",setupDone:false};
 
-const C = {
-  green:"#00e87a", greenDim:"#003d20", greenBdr:"#00703a",
-  orange:"#ff8c00", orangeDim:"#2a1800", orangeBdr:"#7a3c00",
-  red:"#ff3355", redDim:"#1c0610", redBdr:"#6a1228",
-  gold:"#ffc842", goldDim:"#2a1f00", goldBdr:"#7a5500",
-  blue:"#4488ff", blueDim:"#001433", blueBdr:"#1144aa",
-  bg:"#2e2e50", surface:"#38386a", surfaceUp:"#424278",
-  bdr:"#52528a", bdrUp:"#62629a", text:"#ffffff", muted:"#a0a0cc", hint:"#7070aa",
+const C={
+  green:"#00e87a",greenDim:"#003d20",greenBdr:"#00703a",
+  orange:"#ff8c00",orangeDim:"#3d2000",orangeBdr:"#7a3c00",
+  red:"#ff3355",redDim:"#3d0f1a",redBdr:"#6a1228",
+  gold:"#ffc842",goldDim:"#2a1f00",goldBdr:"#7a5500",
+  blue:"#4488ff",blueDim:"#001433",blueBdr:"#1144aa",
+  purple:"#bb77ff",purpleDim:"#1a0044",purpleBdr:"#7733cc",
+  bg:"#2e2e50",surface:"#38386a",surfaceUp:"#424278",
+  bdr:"#52528a",bdrUp:"#62629a",text:"#ffffff",muted:"#a0a0cc",hint:"#7070aa",
 };
 
-const S = {
-  btn:(bg="#00e87a",fg="#000")=>({background:bg,border:"none",borderRadius:10,padding:"12px 18px",color:fg,fontWeight:700,fontSize:14,cursor:"pointer",letterSpacing:.5,fontFamily:"inherit",width:"100%"}),
+const S={
+  btn:(bg=C.green,fg="#000")=>({background:bg,border:"none",borderRadius:10,padding:"12px 18px",color:fg,fontWeight:700,fontSize:14,cursor:"pointer",letterSpacing:.5,fontFamily:"inherit",width:"100%"}),
   ghost:(sm)=>({background:"transparent",border:`1px solid ${C.bdr}`,borderRadius:10,padding:sm?"7px 14px":"10px 16px",color:C.muted,fontSize:sm?12:14,cursor:"pointer",fontFamily:"inherit"}),
   input:(ex={})=>({width:"100%",background:C.surface,border:`1px solid ${C.bdrUp}`,borderRadius:10,padding:"11px 14px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"inherit",marginBottom:10,...ex}),
   label:{display:"block",fontSize:10,color:C.muted,letterSpacing:2,marginBottom:7,textTransform:"uppercase",fontFamily:"monospace"},
@@ -89,7 +68,7 @@ const S = {
   tab:(on)=>({flex:1,padding:"11px 4px",background:"none",border:"none",borderBottom:`2px solid ${on?C.green:"transparent"}`,color:on?C.green:C.muted,fontSize:13,cursor:"pointer",fontFamily:"inherit",letterSpacing:.5}),
 };
 
-function App() {
+function App(){
   const [guests,setGuests]=useState([]);
   const [checkins,setCheckins]=useState([]);
   const [config,setConfig]=useState(DEFAULT_CONFIG);
@@ -97,63 +76,68 @@ function App() {
   const [screen,setScreen]=useState("guard");
   const [installPrompt,setInstallPrompt]=useState(null);
 
+  // Guard
   const [query,setQuery]=useState("");
   const [selected,setSelected]=useState(null);
   const [flash,setFlash]=useState(false);
 
-  const [authed,setAuthed]=useState(false);
+  // Auth: null | 'overseer' | 'admin'
+  const [authLevel,setAuthLevel]=useState(null);
   const [pin,setPin]=useState("");
   const [pinErr,setPinErr]=useState(false);
   const [tab,setTab]=useState("live");
-  const [newPin,setNewPin]=useState("");
-  const [pinSaved,setPinSaved]=useState(false);
 
+  // PIN management (admin only)
+  const [newAdminPin,setNewAdminPin]=useState("");
+  const [newOverseerPin,setNewOverseerPin]=useState("");
+  const [aPinSaved,setAPinSaved]=useState(false);
+  const [oPinSaved,setOPinSaved]=useState(false);
+
+  // Guest management
   const [mName,setMName]=useState("");
   const [mDays,setMDays]=useState([]);
   const [mVIP,setMVIP]=useState(false);
   const [mAdded,setMAdded]=useState(false);
   const [gMsg,setGMsg]=useState("");
 
+  // Setup
   const [sName,setSName]=useState("");
   const [sPin,setSPin]=useState("");
+  const [sOPin,setSOPin]=useState("");
   const [sDay,setSDay]=useState(1);
 
-  const csvRef=useRef(), aCsvRef=useRef(), searchRef=useRef();
+  const csvRef=useRef(),aCsvRef=useRef(),searchRef=useRef();
 
   useEffect(()=>{
     const link=document.createElement("link");
     link.rel="stylesheet";
     link.href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap";
     document.head.appendChild(link);
-
-    // Capture install prompt for Android
-    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); setInstallPrompt(e); });
-
-    let firstLoad=false;
-    const mark=(cfg)=>{ if(firstLoad)return; firstLoad=true; setReady(true); if(!cfg?.setupDone)setScreen("setup"); else setTimeout(()=>searchRef.current?.focus(),200); };
+    window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();setInstallPrompt(e);});
+    let done=false;
+    const mark=(cfg)=>{if(done)return;done=true;setReady(true);if(!cfg?.setupDone)setScreen("setup");else setTimeout(()=>searchRef.current?.focus(),200);};
     const unG=fbListen('guests',d=>setGuests(Array.isArray(d)?d:d?Object.values(d):[]));
     const unC=fbListen('checkins',d=>setCheckins(Array.isArray(d)?d:d?Object.values(d):[]));
-    const unCfg=fbListen('config',d=>{ if(d)setConfig(d); mark(d); });
+    const unCfg=fbListen('config',d=>{if(d)setConfig({...DEFAULT_CONFIG,...d});mark(d);});
     const t=setTimeout(()=>mark(null),5000);
-    return()=>{ unG();unC();unCfg();clearTimeout(t); };
+    return()=>{unG();unC();unCfg();clearTimeout(t);};
   },[]);
 
   const results=query.trim().length>=2?guests.filter(g=>g.name&&g.name.toLowerCase().includes(query.toLowerCase())).slice(0,20):[];
   function ciToday(gid){return checkins.find(c=>c.guestId===gid&&c.day===config.currentDay)||null;}
   function hasAccess(g,day){return g.isVIP||(Array.isArray(g.days)&&g.days.includes(day));}
   const todayCI=checkins.filter(c=>c.day===config.currentDay);
+  const isAdmin=authLevel==='admin';
 
   async function checkIn(guest){
     const entry={id:`ci-${Date.now()}`,guestId:guest.id,guestName:guest.name,day:config.currentDay,timestamp:new Date().toISOString()};
-    const updated=[...checkins,entry];
-    setCheckins(updated); await fbSet('checkins',updated);
-    setFlash(true); setTimeout(()=>setFlash(false),1400);
+    const updated=[...checkins,entry];setCheckins(updated);await fbSet('checkins',updated);
+    setFlash(true);setTimeout(()=>setFlash(false),1400);
   }
   async function undoCI(guest){
     const updated=checkins.filter(c=>!(c.guestId===guest.id&&c.day===config.currentDay));
-    setCheckins(updated); await fbSet('checkins',updated);
+    setCheckins(updated);await fbSet('checkins',updated);
   }
-
   function parseCSV(file,append){
     const yv=new Set(["yes","1","true","x","y","✓"]);
     const ok=v=>yv.has(String(v??"").toLowerCase().trim());
@@ -173,60 +157,61 @@ function App() {
       setTimeout(()=>setGMsg(""),3000);
     }});
   }
-
   async function addManual(){
     if(!mName.trim())return;
-    const g={id:`g-${Date.now()}`,name:mName.trim(),days:mDays,isVIP:mVIP,notes:""};
-    await fbSet('guests',[...guests,g]);
-    setMName("");setMDays([]);setMVIP(false);
-    setMAdded(true);setTimeout(()=>setMAdded(false),2000);
+    await fbSet('guests',[...guests,{id:`g-${Date.now()}`,name:mName.trim(),days:mDays,isVIP:mVIP,notes:""}]);
+    setMName("");setMDays([]);setMVIP(false);setMAdded(true);setTimeout(()=>setMAdded(false),2000);
   }
-
-  async function saveConfig(updates){
-    const nc={...config,...updates}; setConfig(nc); await fbSet('config',nc);
-  }
-
+  async function saveConfig(updates){const nc={...config,...updates};setConfig(nc);await fbSet('config',nc);}
   async function finishSetup(){
-    if(!sName.trim()||!sPin)return;
-    const nc={...config,adminPin:sPin,eventName:sName.trim(),currentDay:sDay,setupDone:true};
-    setConfig(nc); await fbSet('config',nc); setScreen("guard");
-    setTimeout(()=>searchRef.current?.focus(),200);
+    if(!sName.trim()||!sPin||!sOPin)return;
+    const nc={...DEFAULT_CONFIG,adminPin:sPin,overseerPin:sOPin,eventName:sName.trim(),currentDay:sDay,setupDone:true};
+    setConfig(nc);await fbSet('config',nc);setScreen("guard");setTimeout(()=>searchRef.current?.focus(),200);
   }
-
+  function tryPin(){
+    if(pin===config.adminPin){setAuthLevel('admin');setPin("");}
+    else if(pin===config.overseerPin){setAuthLevel('overseer');setPin("");}
+    else{setPinErr(true);setPin("");}
+  }
   function exportCSV(day){
     const rows=checkins.filter(c=>day==="all"||c.day===day).map(c=>`"${c.guestName}",Day ${c.day},"${new Date(c.timestamp).toLocaleString()}"`);
     const blob=new Blob([["Name,Day,Time\n",...rows.map(r=>r+"\n")].join("")],{type:"text/csv"});
-    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-    a.download=day==="all"?"all-checkins.csv":`day${day}-checkins.csv`; a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=day==="all"?"all-checkins.csv":`day${day}-checkins.csv`;a.click();
   }
 
   const page={minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans',system-ui,sans-serif",display:"flex",flexDirection:"column"};
 
-  if(!ready) return(
+  // ── LOADING ──────────────────────────────────────────────────────────────────
+  if(!ready)return(
     <div style={{...page,alignItems:"center",justifyContent:"center"}}>
-      <img src="./icon.svg" style={{width:64,marginBottom:20,opacity:.6}} />
+      <img src="./icon.svg" style={{width:64,marginBottom:20,opacity:.6}}/>
       <div style={{color:C.green,fontFamily:"monospace",letterSpacing:4,fontSize:13}}>LOADING...</div>
       <div style={{color:C.muted,fontSize:11,marginTop:10,fontFamily:"monospace"}}>connecting to database</div>
     </div>
   );
 
-  // ── SETUP ──────────────────────────────────────────────────────────────────
-  if(screen==="setup") return(
+  // ── SETUP ────────────────────────────────────────────────────────────────────
+  if(screen==="setup")return(
     <div style={page}>
       <div style={{maxWidth:460,margin:"0 auto",padding:"28px 18px",width:"100%"}}>
         <div style={{textAlign:"center",marginBottom:28}}>
-          <img src="./icon.svg" style={{width:56,marginBottom:12}} />
-          <div style={{fontSize:22,fontWeight:700,letterSpacing:1}}>Security App Setup</div>
+          <img src="./icon.svg" style={{width:56,marginBottom:12}}/>
+          <div style={{fontSize:22,fontWeight:700}}>Security App Setup</div>
           <div style={{fontSize:13,color:C.muted,marginTop:4}}>Admin configuration — one time only</div>
         </div>
         <div style={S.card({marginBottom:12})}>
           <div style={S.label}>Event name</div>
-          <input style={S.input()} placeholder="e.g. Annual Convention 2025" value={sName} onChange={e=>setSName(e.target.value)} />
+          <input style={S.input()} placeholder="e.g. Annual Convention 2025" value={sName} onChange={e=>setSName(e.target.value)}/>
         </div>
         <div style={S.card({marginBottom:12})}>
-          <div style={S.label}>Admin PIN</div>
-          <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Guards won't see this — it's for your admin dashboard only</div>
-          <input style={S.input({letterSpacing:4})} type="password" placeholder="Choose a PIN" value={sPin} onChange={e=>setSPin(e.target.value)} />
+          <div style={S.label}>Your Super Admin PIN</div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Only you use this — gives full access including reset &amp; delete</div>
+          <input style={S.input({letterSpacing:4})} type="password" placeholder="Choose your PIN" value={sPin} onChange={e=>setSPin(e.target.value)}/>
+        </div>
+        <div style={S.card({marginBottom:12})}>
+          <div style={S.label}>Overseer PIN</div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Share with your overseers — can add guests &amp; view live, cannot reset or delete</div>
+          <input style={S.input({letterSpacing:4})} type="password" placeholder="Choose overseer PIN" value={sOPin} onChange={e=>setSOPin(e.target.value)}/>
         </div>
         <div style={S.card({marginBottom:12})}>
           <div style={S.label}>Starting day</div>
@@ -236,73 +221,77 @@ function App() {
         </div>
         <div style={S.card({marginBottom:20})}>
           <div style={S.label}>Upload guest list</div>
-          <div style={{fontSize:11,color:C.muted,marginBottom:10,lineHeight:1.6}}>
-            CSV columns: <span style={{color:C.green,fontFamily:"monospace"}}>Name, Day1, Day2, Day3, VIP, Notes</span><br/>
-            Use <span style={{fontFamily:"monospace"}}>yes</span> or <span style={{fontFamily:"monospace"}}>1</span> in day/VIP columns.
-          </div>
-          <input ref={csvRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0]){parseCSV(e.target.files[0],false);e.target.value="";}}} />
-          <button onClick={()=>csvRef.current?.click()} style={{width:"100%",background:"transparent",border:`2px dashed ${C.bdr}`,borderRadius:10,padding:14,color:C.muted,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
-            📁 Upload CSV
-          </button>
+          <div style={{fontSize:11,color:C.muted,marginBottom:10,lineHeight:1.6}}>CSV columns: <span style={{color:C.green,fontFamily:"monospace"}}>Name, Day1, Day2, Day3, VIP, Notes</span></div>
+          <input ref={csvRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0]){parseCSV(e.target.files[0],false);e.target.value="";}}}/>
+          <button onClick={()=>csvRef.current?.click()} style={{width:"100%",background:"transparent",border:`2px dashed ${C.bdr}`,borderRadius:10,padding:14,color:C.muted,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>📁 Upload CSV</button>
           {gMsg&&<div style={{color:C.green,fontSize:13,fontFamily:"monospace",marginTop:8}}>{gMsg}</div>}
           {guests.length>0&&<div style={{color:C.green,fontSize:13,fontFamily:"monospace",marginTop:6}}>✓ {guests.length} guests ready</div>}
           <div style={{borderTop:`1px solid ${C.bdr}`,marginTop:14,paddingTop:12}}>
-            <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Or add names manually to test:</div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Or add names manually:</div>
             <div style={{display:"flex",gap:8}}>
-              <input style={{...S.input({marginBottom:0,flex:1})}} placeholder="Full name" value={mName} onChange={e=>setMName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addManual()} />
+              <input style={{...S.input({marginBottom:0,flex:1})}} placeholder="Full name" value={mName} onChange={e=>setMName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addManual()}/>
               <button style={{...S.btn(),width:"auto",padding:"10px 16px",borderRadius:10}} onClick={addManual}>+</button>
             </div>
           </div>
         </div>
-        <button onClick={finishSetup} disabled={!sName.trim()||!sPin}
-          style={{...S.btn(),opacity:(!sName.trim()||!sPin)?.35:1,fontSize:16,padding:16,letterSpacing:2,borderRadius:12}}>
+        <button onClick={finishSetup} disabled={!sName.trim()||!sPin||!sOPin}
+          style={{...S.btn(),opacity:(!sName.trim()||!sPin||!sOPin)?.35:1,fontSize:16,padding:16,letterSpacing:2,borderRadius:12}}>
           LAUNCH EVENT →
         </button>
       </div>
     </div>
   );
 
-  // ── ADMIN ───────────────────────────────────────────────────────────────────
+  // ── DASHBOARD ────────────────────────────────────────────────────────────────
   if(screen==="admin"){
-    if(!authed) return(
+    if(!authLevel)return(
       <div style={{...page,alignItems:"center",justifyContent:"center",padding:20}}>
         <div style={{width:"100%",maxWidth:320,textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:12}}>🔐</div>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Admin Access</div>
-          <div style={{fontSize:13,color:C.muted,marginBottom:22}}>Enter your admin PIN</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Dashboard Access</div>
+          <div style={{fontSize:13,color:C.muted,marginBottom:22}}>Enter your PIN to continue</div>
           <input type="password" autoFocus placeholder="••••"
             style={S.input({textAlign:"center",fontSize:26,letterSpacing:8,borderColor:pinErr?C.red:C.bdrUp})}
             value={pin} onChange={e=>{setPin(e.target.value);setPinErr(false);}}
-            onKeyDown={e=>{if(e.key==="Enter"){if(pin===config.adminPin){setAuthed(true);setPin("");}else{setPinErr(true);setPin("");};}}} />
+            onKeyDown={e=>e.key==="Enter"&&tryPin()}/>
           {pinErr&&<div style={{color:C.red,fontSize:12,fontFamily:"monospace",marginBottom:12,marginTop:-6}}>INCORRECT PIN</div>}
           <div style={{display:"flex",gap:10}}>
             <button style={{...S.ghost(),flex:1}} onClick={()=>{setScreen("guard");setPin("");setPinErr(false);}}>Cancel</button>
-            <button style={{...S.btn(),flex:1}} onClick={()=>{if(pin===config.adminPin){setAuthed(true);setPin("");}else{setPinErr(true);setPin("");}}}>Enter</button>
+            <button style={{...S.btn(),flex:1}} onClick={tryPin}>Enter</button>
           </div>
         </div>
       </div>
     );
 
+    const roleColor=isAdmin?C.gold:C.purple;
+    const roleLabel=isAdmin?"⭐ SUPER ADMIN":"👁 OVERSEER";
     const recentToday=[...todayCI].reverse().slice(0,60);
+    const tabs=[["live","📡 Live"],["guests","👥 Guests"],...(isAdmin?[["settings","⚙️ Settings"]]:[]));
+
     return(
       <div style={page}>
         <div style={{background:C.surface,borderBottom:`1px solid ${C.bdr}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace"}}>ADMIN — {config.eventName.toUpperCase()}</div>
-            <div style={{fontSize:17,fontWeight:700}}>Dashboard</div>
+            <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace"}}>{config.eventName.toUpperCase()}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginTop:2}}>
+              <div style={{fontSize:17,fontWeight:700}}>Dashboard</div>
+              <span style={{fontSize:10,fontWeight:700,color:roleColor,fontFamily:"monospace",background:`${roleColor}22`,border:`1px solid ${roleColor}55`,borderRadius:5,padding:"2px 7px",letterSpacing:1}}>{roleLabel}</span>
+            </div>
           </div>
-          <button style={S.ghost(true)} onClick={()=>{setScreen("guard");setAuthed(false);}}>← Guard view</button>
+          <button style={S.ghost(true)} onClick={()=>{setScreen("guard");setAuthLevel(null);}}>← Back</button>
         </div>
+
         <div style={{background:C.surface,padding:"10px 16px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:8,alignItems:"center"}}>
           <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginRight:4}}>ACTIVE DAY:</div>
           {[1,2,3].map(d=><button key={d} style={{...S.dayBtn(config.currentDay===d),flex:1}} onClick={()=>saveConfig({currentDay:d})}>DAY {d}</button>)}
         </div>
+
         <div style={{display:"flex",background:C.surface,borderBottom:`1px solid ${C.bdr}`}}>
-          {[["live","📡 Live"],["guests","👥 Guests"],["settings","⚙️ Settings"]].map(([id,lbl])=>(
-            <button key={id} style={S.tab(tab===id)} onClick={()=>setTab(id)}>{lbl}</button>
-          ))}
+          {tabs.map(([id,lbl])=><button key={id} style={S.tab(tab===id)} onClick={()=>setTab(id)}>{lbl}</button>)}
         </div>
+
         <div style={{flex:1,overflowY:"auto",padding:16}}>
+
           {tab==="live"&&<div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
               {[1,2,3].map(d=>{
@@ -347,25 +336,23 @@ function App() {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace"}}>{guests.length} GUESTS TOTAL</div>
               <div style={{display:"flex",gap:8}}>
-                <input ref={aCsvRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0]){parseCSV(e.target.files[0],true);e.target.value="";}}} />
+                <input ref={aCsvRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0]){parseCSV(e.target.files[0],true);e.target.value="";}}}/>
                 <button style={S.ghost(true)} onClick={()=>aCsvRef.current?.click()}>+ CSV</button>
-                <button style={{...S.ghost(true),color:C.red,borderColor:C.redBdr}} onClick={async()=>{if(window.confirm("Clear ALL guests and check-ins?")){await fbSet('guests',[]);await fbSet('checkins',[]);}}}>Clear</button>
+                {isAdmin&&<button style={{...S.ghost(true),color:C.red,borderColor:C.redBdr}} onClick={async()=>{if(window.confirm("Clear ALL guests and check-ins?")){await fbSet('guests',[]);await fbSet('checkins',[]);}}}>Clear all</button>}
               </div>
             </div>
             {gMsg&&<div style={{color:C.green,fontFamily:"monospace",fontSize:13,marginBottom:10}}>{gMsg}</div>}
             <div style={S.card({marginBottom:14})}>
               <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginBottom:10}}>ADD MANUALLY</div>
-              <input style={S.input()} placeholder="Full name" value={mName} onChange={e=>setMName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addManual()} />
+              <input style={S.input()} placeholder="Full name" value={mName} onChange={e=>setMName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addManual()}/>
               <div style={{display:"flex",gap:7,marginBottom:10}}>
                 {[1,2,3].map(d=><button key={d} style={S.dayBtn(mDays.includes(d))} onClick={()=>setMDays(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d])}>DAY {d}</button>)}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <input type="checkbox" id="mvip" checked={mVIP} onChange={e=>setMVIP(e.target.checked)} style={{width:16,height:16,accentColor:C.gold}} />
+                <input type="checkbox" id="mvip" checked={mVIP} onChange={e=>setMVIP(e.target.checked)} style={{width:16,height:16,accentColor:C.gold}}/>
                 <label htmlFor="mvip" style={{color:C.gold,fontSize:13,cursor:"pointer"}}>⭐ VIP — All Days Access</label>
               </div>
-              <button style={S.btn(mAdded?"#005a30":C.green)} onClick={addManual} disabled={!mName.trim()}>
-                {mAdded?"✓ Added!":"+ Add Guest"}
-              </button>
+              <button style={S.btn(mAdded?"#005a30":C.green)} onClick={addManual} disabled={!mName.trim()}>{mAdded?"✓ Added!":"+ Add Guest"}</button>
             </div>
             <div style={S.card()}>
               <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginBottom:10}}>BREAKDOWN</div>
@@ -384,42 +371,44 @@ function App() {
             </div>
           </div>}
 
-          {tab==="settings"&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {tab==="settings"&&isAdmin&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
             <div style={S.card()}>
               <div style={S.label}>Event name</div>
-              <input style={S.input({marginBottom:0})} value={config.eventName} onChange={e=>saveConfig({eventName:e.target.value})} />
+              <input style={S.input({marginBottom:0})} value={config.eventName} onChange={e=>saveConfig({eventName:e.target.value})}/>
             </div>
             <div style={S.card()}>
-              <div style={S.label}>Change admin PIN</div>
+              <div style={S.label}>Super Admin PIN</div>
+              <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Your full-access PIN — keep this private</div>
               <div style={{display:"flex",gap:8}}>
-                <input style={{...S.input({marginBottom:0,flex:1,letterSpacing:4})}} type="password" placeholder="New PIN" value={newPin} onChange={e=>{setNewPin(e.target.value);setPinSaved(false);}} />
-                <button style={{...S.btn(),width:"auto",padding:"10px 16px",borderRadius:10}} onClick={()=>{if(newPin){saveConfig({adminPin:newPin});setNewPin("");setPinSaved(true);}}}>
-                  {pinSaved?"✓":"Save"}
-                </button>
+                <input style={{...S.input({marginBottom:0,flex:1,letterSpacing:4})}} type="password" placeholder="New PIN" value={newAdminPin} onChange={e=>{setNewAdminPin(e.target.value);setAPinSaved(false);}}/>
+                <button style={{...S.btn(),width:"auto",padding:"10px 16px",borderRadius:10}} onClick={()=>{if(newAdminPin){saveConfig({adminPin:newAdminPin});setNewAdminPin("");setAPinSaved(true);}}}>{aPinSaved?"✓":"Save"}</button>
               </div>
             </div>
             <div style={S.card()}>
-              <div style={S.label}>Reset check-ins (keep guests)</div>
-              <button style={{...S.ghost(),width:"100%",color:C.orange,borderColor:C.orangeBdr}} onClick={async()=>{if(window.confirm("Reset all check-ins? Guest list stays.")){await fbSet('checkins',[]);}}}>Reset check-ins only</button>
+              <div style={S.label}>Overseer PIN</div>
+              <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Shared with your overseers — limited access</div>
+              <div style={{display:"flex",gap:8}}>
+                <input style={{...S.input({marginBottom:0,flex:1,letterSpacing:4})}} type="password" placeholder="New PIN" value={newOverseerPin} onChange={e=>{setNewOverseerPin(e.target.value);setOPinSaved(false);}}/>
+                <button style={{...S.btn(),width:"auto",padding:"10px 16px",borderRadius:10}} onClick={()=>{if(newOverseerPin){saveConfig({overseerPin:newOverseerPin});setNewOverseerPin("");setOPinSaved(true);}}}>{oPinSaved?"✓":"Save"}</button>
+              </div>
             </div>
             <div style={{...S.card(),border:`2px solid ${C.orange}`}}>
               <div style={{fontSize:10,color:C.orange,letterSpacing:2,fontFamily:"monospace",marginBottom:6}}>TESTING</div>
               <div style={{fontSize:13,color:C.muted,marginBottom:12,lineHeight:1.5}}>Clears all check-ins and resets to Day 1. Guest list stays intact.</div>
-              <button style={{...S.btn(C.orange,"#000"),fontSize:15,letterSpacing:1}} onClick={async()=>{if(window.confirm("Reset all check-ins and go back to Day 1? Guest list will be kept.")){await fbSet('checkins',[]);await saveConfig({currentDay:1});}}}>
-                🔄 Reset for Testing
-              </button>
+              <button style={S.btn(C.orange,"#000")} onClick={async()=>{if(window.confirm("Reset all check-ins and go back to Day 1? Guest list will be kept.")){await fbSet('checkins',[]);await saveConfig({currentDay:1});}}}>🔄 Reset for Testing</button>
             </div>
             <div style={S.card()}>
               <div style={S.label}>Full reset</div>
-              <button style={{...S.ghost(),width:"100%",color:C.red,borderColor:C.redBdr}} onClick={async()=>{if(window.confirm("Clear everything and restart setup?")){await fbSet('guests',[]);await fbSet('checkins',[]);await fbSet('config',DEFAULT_CONFIG);setScreen("setup");setAuthed(false);}}}>Clear everything & restart</button>
+              <button style={{...S.ghost(),width:"100%",color:C.red,borderColor:C.redBdr}} onClick={async()=>{if(window.confirm("Clear everything and restart setup?")){await fbSet('guests',[]);await fbSet('checkins',[]);await fbSet('config',DEFAULT_CONFIG);setScreen("setup");setAuthLevel(null);}}}>Clear everything &amp; restart</button>
             </div>
           </div>}
+
         </div>
       </div>
     );
   }
 
-  // ── GUARD VIEW ──────────────────────────────────────────────────────────────
+  // ── GUARD VIEW ────────────────────────────────────────────────────────────────
   const ci=selected?ciToday(selected.id):null;
   const auth=selected?hasAccess(selected,config.currentDay):false;
   const status=!selected?null:!auth?"denied":ci?"duplicate":"clear";
@@ -438,23 +427,13 @@ function App() {
             <span style={{background:C.greenDim,border:`1px solid ${C.greenBdr}`,borderRadius:7,padding:"3px 10px",fontSize:11,color:C.green,fontFamily:"monospace"}}>{todayCI.length} in</span>
           </div>
         </div>
-
-        {installPrompt&&(
-          <button onClick={()=>installPrompt.prompt()} style={{...S.btn(C.blue,"#fff"),marginBottom:10,fontSize:13,borderRadius:10,padding:"10px 14px",letterSpacing:0}}>
-            📲 Install App on This Phone
-          </button>
-        )}
-
+        {installPrompt&&<button onClick={()=>installPrompt.prompt()} style={{...S.btn(C.blue,"#fff"),marginBottom:10,fontSize:13,borderRadius:10,padding:"10px 14px",letterSpacing:0}}>📲 Install App on This Phone</button>}
         <div style={{position:"relative"}}>
           <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:17,color:C.muted}}>🔍</span>
           <input ref={searchRef} autoComplete="off" autoCorrect="off" spellCheck={false}
             style={S.input({paddingLeft:40,paddingRight:36,fontSize:17,marginBottom:0,borderRadius:12})}
-            placeholder="Search guest name…" value={query}
-            onChange={e=>{setQuery(e.target.value);setSelected(null);}} />
-          {query&&(
-            <button onClick={()=>{setQuery("");setSelected(null);searchRef.current?.focus();}}
-              style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
-          )}
+            placeholder="Search guest name…" value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}}/>
+          {query&&<button onClick={()=>{setQuery("");setSelected(null);searchRef.current?.focus();}} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>}
         </div>
       </div>
 
@@ -462,12 +441,7 @@ function App() {
         <div style={{padding:"12px 14px 0"}}>
           <div style={{background:sc.bg,border:`2px solid ${sc.bdr}`,borderRadius:16,padding:16,position:"relative"}}>
             <button onClick={()=>setSelected(null)} style={{position:"absolute",top:10,right:12,background:"none",border:"none",color:C.muted,fontSize:24,cursor:"pointer",lineHeight:1}}>×</button>
-            {selected.isVIP&&(
-              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:C.goldDim,border:`1px solid ${C.goldBdr}`,borderRadius:6,padding:"3px 10px",marginBottom:10}}>
-                <span>⭐</span>
-                <span style={{color:C.gold,fontSize:11,fontWeight:700,letterSpacing:2,fontFamily:"monospace"}}>VIP — ALL DAYS ACCESS</span>
-              </div>
-            )}
+            {selected.isVIP&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:C.goldDim,border:`1px solid ${C.goldBdr}`,borderRadius:6,padding:"3px 10px",marginBottom:10}}><span>⭐</span><span style={{color:C.gold,fontSize:11,fontWeight:700,letterSpacing:2,fontFamily:"monospace"}}>VIP — ALL DAYS ACCESS</span></div>}
             <div style={{fontSize:24,fontWeight:700,paddingRight:30,marginBottom:selected.notes?4:12}}>{selected.name}</div>
             {selected.notes&&<div style={{fontSize:12,color:C.muted,marginBottom:12}}>{selected.notes}</div>}
             <div style={{display:"flex",gap:7,marginBottom:14}}>
@@ -481,26 +455,9 @@ function App() {
                 </div>);
               })}
             </div>
-            {status==="denied"&&(
-              <div style={{background:"#3d0f1a",borderRadius:12,padding:14,textAlign:"center"}}>
-                <div style={{color:C.red,fontSize:20,fontWeight:700,letterSpacing:1}}>⛔ NOT AUTHORIZED</div>
-                <div style={{color:"#ffaaaa",fontSize:13,marginTop:4}}>No access for Day {config.currentDay}</div>
-              </div>
-            )}
-            {status==="duplicate"&&(
-              <div>
-                <div style={{background:"#3d2000",borderRadius:12,padding:14,textAlign:"center",marginBottom:8}}>
-                  <div style={{color:C.orange,fontSize:20,fontWeight:700,letterSpacing:1}}>⚠️ ALREADY CHECKED IN</div>
-                  <div style={{color:"#ffcc88",fontSize:12,marginTop:5,fontFamily:"monospace"}}>at {new Date(ci.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
-                </div>
-                <button style={{...S.ghost(),width:"100%"}} onClick={()=>undoCI(selected)}>Undo check-in</button>
-              </div>
-            )}
-            {status==="clear"&&(
-              <button onClick={()=>checkIn(selected)} style={{...S.btn(flash?"#007040":C.green),fontSize:20,padding:18,borderRadius:14,letterSpacing:2,transition:"background 0.3s"}}>
-                {flash?"✓  CHECKED IN!":"✓  CHECK IN"}
-              </button>
-            )}
+            {status==="denied"&&<div style={{background:C.redDim,borderRadius:12,padding:14,textAlign:"center"}}><div style={{color:C.red,fontSize:20,fontWeight:700,letterSpacing:1}}>⛔ NOT AUTHORIZED</div><div style={{color:"#ffaaaa",fontSize:13,marginTop:4}}>No access for Day {config.currentDay}</div></div>}
+            {status==="duplicate"&&<div><div style={{background:C.orangeDim,borderRadius:12,padding:14,textAlign:"center",marginBottom:8}}><div style={{color:C.orange,fontSize:20,fontWeight:700,letterSpacing:1}}>⚠️ ALREADY CHECKED IN</div><div style={{color:"#ffcc88",fontSize:12,marginTop:5,fontFamily:"monospace"}}>at {new Date(ci.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div></div><button style={{...S.ghost(),width:"100%"}} onClick={()=>undoCI(selected)}>Undo check-in</button></div>}
+            {status==="clear"&&<button onClick={()=>checkIn(selected)} style={{...S.btn(flash?"#007040":C.green),fontSize:20,padding:18,borderRadius:14,letterSpacing:2,transition:"background 0.3s"}}>{flash?"✓  CHECKED IN!":"✓  CHECK IN"}</button>}
           </div>
         </div>
       )}
@@ -508,24 +465,14 @@ function App() {
       {!selected&&results.length>0&&(
         <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:7}}>
           {results.map(g=>{
-            const ciG=ciToday(g.id);
-            const authG=hasAccess(g,config.currentDay);
-            return(
-              <button key={g.id} onClick={()=>setSelected(g)} style={{width:"100%",textAlign:"left",cursor:"pointer",background:g.isVIP?C.goldDim:ciG?C.greenDim:!authG?C.redDim:C.surface,border:`1px solid ${g.isVIP?C.goldBdr:ciG?C.greenBdr:!authG?C.redBdr:C.bdr}`,borderRadius:13,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"inherit"}}>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                    <span style={{fontSize:16,fontWeight:600,color:C.text}}>{g.name}</span>
-                    {g.isVIP&&<span style={{fontSize:10,color:C.gold,fontFamily:"monospace",letterSpacing:1}}>VIP</span>}
-                  </div>
-                  <div style={{display:"flex",gap:5}}>
-                    {[1,2,3].map(d=>(g.isVIP||(Array.isArray(g.days)&&g.days.includes(d)))?(
-                      <span key={d} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:d===config.currentDay?C.blueDim:C.surfaceUp,color:d===config.currentDay?C.blue:C.muted,fontFamily:"monospace",letterSpacing:.5}}>D{d}</span>
-                    ):null)}
-                  </div>
-                </div>
-                <span style={{fontSize:22,color:ciG?C.green:!authG?C.red:C.hint}}>{ciG?"✓":!authG?"✗":"›"}</span>
-              </button>
-            );
+            const ciG=ciToday(g.id);const authG=hasAccess(g,config.currentDay);
+            return(<button key={g.id} onClick={()=>setSelected(g)} style={{width:"100%",textAlign:"left",cursor:"pointer",background:g.isVIP?C.goldDim:ciG?C.greenDim:!authG?C.redDim:C.surface,border:`1px solid ${g.isVIP?C.goldBdr:ciG?C.greenBdr:!authG?C.redBdr:C.bdr}`,borderRadius:13,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"inherit"}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{fontSize:16,fontWeight:600,color:C.text}}>{g.name}</span>{g.isVIP&&<span style={{fontSize:10,color:C.gold,fontFamily:"monospace",letterSpacing:1}}>VIP</span>}</div>
+                <div style={{display:"flex",gap:5}}>{[1,2,3].map(d=>(g.isVIP||(Array.isArray(g.days)&&g.days.includes(d)))?(<span key={d} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:d===config.currentDay?C.blueDim:C.surfaceUp,color:d===config.currentDay?C.blue:C.muted,fontFamily:"monospace",letterSpacing:.5}}>D{d}</span>):null)}</div>
+              </div>
+              <span style={{fontSize:22,color:ciG?C.green:!authG?C.red:C.hint}}>{ciG?"✓":!authG?"✗":"›"}</span>
+            </button>);
           })}
         </div>
       )}
@@ -545,15 +492,12 @@ function App() {
         </div>
       )}
 
-      <button onClick={()=>setScreen("admin")}
-        style={{position:"fixed",bottom:24,right:20,width:58,height:58,borderRadius:"50%",background:C.surface,border:`2px solid ${C.bdrUp}`,color:"#ffffff",fontSize:22,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",zIndex:100}}>
-        ⚙️
-      </button>
+      <button onClick={()=>setScreen("admin")} style={{position:"fixed",bottom:24,right:20,width:58,height:58,borderRadius:"50%",background:C.surface,border:`2px solid ${C.bdrUp}`,color:"#ffffff",fontSize:22,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",zIndex:100}}>⚙️</button>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
