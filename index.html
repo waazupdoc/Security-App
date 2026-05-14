@@ -402,6 +402,13 @@ function App() {
               <div style={S.label}>Reset check-ins (keep guests)</div>
               <button style={{...S.ghost(),width:"100%",color:C.orange,borderColor:C.orangeBdr}} onClick={async()=>{if(window.confirm("Reset all check-ins? Guest list stays.")){await fbSet('checkins',[]);}}}>Reset check-ins only</button>
             </div>
+            <div style={{...S.card(),border:`2px solid ${C.orange}`}}>
+              <div style={{fontSize:10,color:C.orange,letterSpacing:2,fontFamily:"monospace",marginBottom:6}}>TESTING</div>
+              <div style={{fontSize:13,color:C.muted,marginBottom:12,lineHeight:1.5}}>Clears all check-ins and resets to Day 1. Guest list stays intact.</div>
+              <button style={{...S.btn(C.orange,"#000"),fontSize:15,letterSpacing:1}} onClick={async()=>{if(window.confirm("Reset all check-ins and go back to Day 1? Guest list will be kept.")){await fbSet('checkins',[]);await saveConfig({currentDay:1});}}}>
+                🔄 Reset for Testing
+              </button>
+            </div>
             <div style={S.card()}>
               <div style={S.label}>Full reset</div>
               <button style={{...S.ghost(),width:"100%",color:C.red,borderColor:C.redBdr}} onClick={async()=>{if(window.confirm("Clear everything and restart setup?")){await fbSet('guests',[]);await fbSet('checkins',[]);await fbSet('config',DEFAULT_CONFIG);setScreen("setup");setAuthed(false);}}}>Clear everything & restart</button>
