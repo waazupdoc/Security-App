@@ -266,7 +266,7 @@ function App(){
     const roleColor=isAdmin?C.gold:C.purple;
     const roleLabel=isAdmin?"⭐ SUPER ADMIN":"👁 OVERSEER";
     const recentToday=[...todayCI].reverse().slice(0,60);
-    const tabs=[["live","📡 Live"],["guests","👥 Guests"],...(isAdmin?[["settings","⚙️ Settings"]]:[]));
+    const tabs=[["live","📡 Live"],["guests","👥 Guests"],...(isAdmin?[["settings","⚙️ Settings"]]:[])];
 
     return(
       <div style={page}>
