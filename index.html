@@ -41,6 +41,9 @@ const ROOT = 'secapp';
 function fbSet(path,val){return db.ref(ROOT+'/'+path).set(val);}
 function fbListen(path,cb){const ref=db.ref(ROOT+'/'+path);ref.on('value',s=>cb(s.val()));return()=>ref.off('value');}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+
+// Enable Firebase offline support — queues writes when offline, auto-syncs when reconnected
+db.ref(ROOT).keepSynced(true);
 </script>
 
 <script type="text/babel">
@@ -75,6 +78,8 @@ function App(){
   const [ready,setReady]=useState(false);
   const [screen,setScreen]=useState("guard");
   const [installPrompt,setInstallPrompt]=useState(null);
+  const [online,setOnline]=useState(navigator.onLine);
+  const [justReconnected,setJustReconnected]=useState(false);
 
   // Guard
   const [query,setQuery]=useState("");
@@ -114,13 +119,27 @@ function App(){
     link.href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap";
     document.head.appendChild(link);
     window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();setInstallPrompt(e);});
+
+    // Online/offline detection
+    const handleOffline = () => setOnline(false);
+    const handleOnline = () => {
+      setOnline(true);
+      setJustReconnected(true);
+      setTimeout(() => setJustReconnected(false), 3000);
+    };
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
     let done=false;
     const mark=(cfg)=>{if(done)return;done=true;setReady(true);if(!cfg?.setupDone)setScreen("setup");else setTimeout(()=>searchRef.current?.focus(),200);};
     const unG=fbListen('guests',d=>setGuests(Array.isArray(d)?d:d?Object.values(d):[]));
     const unC=fbListen('checkins',d=>setCheckins(Array.isArray(d)?d:d?Object.values(d):[]));
     const unCfg=fbListen('config',d=>{if(d)setConfig({...DEFAULT_CONFIG,...d});mark(d);});
     const t=setTimeout(()=>mark(null),5000);
-    return()=>{unG();unC();unCfg();clearTimeout(t);};
+    return()=>{
+      unG();unC();unCfg();clearTimeout(t);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
   },[]);
 
   const results=query.trim().length>=2?guests.filter(g=>g.name&&g.name.toLowerCase().includes(query.toLowerCase())).slice(0,20):[];
@@ -416,6 +435,22 @@ function App(){
 
   return(
     <div style={page}>
+      {/* Offline / reconnected banner */}
+      {!online && (
+        <div style={{background:"#2a1800",borderTop:`3px solid ${C.orange}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:10,zIndex:50}}>
+          <span style={{fontSize:18}}>📶</span>
+          <div>
+            <div style={{color:C.orange,fontSize:13,fontWeight:700}}>No internet connection</div>
+            <div style={{color:"#cc8844",fontSize:11,marginTop:1}}>Search still works — check-ins will sync automatically when WiFi returns</div>
+          </div>
+        </div>
+      )}
+      {online && justReconnected && (
+        <div style={{background:"#003d20",borderTop:`3px solid ${C.green}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>✅</span>
+          <div style={{color:C.green,fontSize:13,fontWeight:700}}>Back online — syncing check-ins...</div>
+        </div>
+      )}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.bdr}`,padding:"12px 14px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div>
@@ -425,6 +460,7 @@ function App(){
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             <span style={{background:C.blueDim,border:`1px solid ${C.blueBdr}`,borderRadius:7,padding:"3px 10px",fontSize:11,color:C.blue,fontFamily:"monospace",letterSpacing:1}}>DAY {config.currentDay}</span>
             <span style={{background:C.greenDim,border:`1px solid ${C.greenBdr}`,borderRadius:7,padding:"3px 10px",fontSize:11,color:C.green,fontFamily:"monospace"}}>{todayCI.length} in</span>
+            {!online && <span style={{background:C.orangeDim,border:`1px solid ${C.orangeBdr}`,borderRadius:7,padding:"3px 8px",fontSize:10,color:C.orange,fontFamily:"monospace"}}>OFFLINE</span>}
           </div>
         </div>
         {installPrompt&&<button onClick={()=>installPrompt.prompt()} style={{...S.btn(C.blue,"#fff"),marginBottom:10,fontSize:13,borderRadius:10,padding:"10px 14px",letterSpacing:0}}>📲 Install App on This Phone</button>}
