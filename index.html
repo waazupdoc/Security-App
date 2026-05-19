@@ -104,6 +104,11 @@ function App(){
   const [mVIP,setMVIP]=useState(false);
   const [mAdded,setMAdded]=useState(false);
   const [gMsg,setGMsg]=useState("");
+  const [guestSearch,setGuestSearch]=useState("");
+  const [editGuest,setEditGuest]=useState(null);
+  const [editDays,setEditDays]=useState([]);
+  const [editVIP,setEditVIP]=useState(false);
+  const [editSaved,setEditSaved]=useState(false);
 
   // Setup
   const [sName,setSName]=useState("");
@@ -181,7 +186,12 @@ function App(){
     await fbSet('guests',[...guests,{id:`g-${Date.now()}`,name:mName.trim(),days:mDays,isVIP:mVIP,notes:""}]);
     setMName("");setMDays([]);setMVIP(false);setMAdded(true);setTimeout(()=>setMAdded(false),2000);
   }
-  async function saveConfig(updates){const nc={...config,...updates};setConfig(nc);await fbSet('config',nc);}
+  async function saveConfig(updates){
+    const nc={...config,...updates};
+    setConfig(nc);
+    // Use update() not set() — only writes changed fields, never overwrites PINs
+    await db.ref(ROOT+'/config').update(updates);
+  }
   async function finishSetup(){
     if(!sName.trim()||!sPin||!sOPin)return;
     const nc={...DEFAULT_CONFIG,adminPin:sPin,overseerPin:sOPin,eventName:sName.trim(),currentDay:sDay,setupDone:true};
@@ -191,6 +201,25 @@ function App(){
     if(pin===config.adminPin){setAuthLevel('admin');setPin("");}
     else if(pin===config.overseerPin){setAuthLevel('overseer');setPin("");}
     else{setPinErr(true);setPin("");}
+  }
+  async function saveGuestEdit(){
+    const updated=guests.map(g=>g.id===editGuest.id?{...g,days:editDays,isVIP:editVIP}:g);
+    await fbSet('guests',updated);
+    setEditSaved(true);setTimeout(()=>setEditSaved(false),2000);
+  }
+  async function deleteGuest(guest){
+    if(!window.confirm(`Remove ${guest.name} from the guest list? This cannot be undone.`))return;
+    const updatedG=guests.filter(g=>g.id!==guest.id);
+    const updatedC=checkins.filter(c=>c.guestId!==guest.id);
+    await fbSet('guests',updatedG);
+    await fbSet('checkins',updatedC);
+    setEditGuest(null);setGuestSearch("");
+  }
+  function openEdit(g){
+    setEditGuest(g);
+    setEditDays(g.isVIP?[1,2,3]:[...(g.days||[])]);
+    setEditVIP(g.isVIP||false);
+    setEditSaved(false);
   }
   function exportCSV(day){
     const rows=checkins.filter(c=>day==="all"||c.day===day).map(c=>`"${c.guestName}",Day ${c.day},"${new Date(c.timestamp).toLocaleString()}"`);
@@ -361,6 +390,71 @@ function App(){
               </div>
             </div>
             {gMsg&&<div style={{color:C.green,fontFamily:"monospace",fontSize:13,marginBottom:10}}>{gMsg}</div>}
+
+            {/* FIND & EDIT GUEST */}
+            <div style={S.card({marginBottom:14})}>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginBottom:10}}>FIND &amp; EDIT GUEST</div>
+              <div style={{position:"relative",marginBottom:10}}>
+                <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.muted,fontSize:15}}>🔍</span>
+                <input style={S.input({paddingLeft:36,marginBottom:0})} placeholder="Search by name…"
+                  value={guestSearch} onChange={e=>{setGuestSearch(e.target.value);setEditGuest(null);}}/>
+              </div>
+              {guestSearch.trim().length>=2&&!editGuest&&(()=>{
+                const matches=guests.filter(g=>g.name.toLowerCase().includes(guestSearch.toLowerCase())).slice(0,10);
+                return matches.length===0
+                  ?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"10px 0"}}>No guests found</div>
+                  :<div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {matches.map(g=>(
+                      <button key={g.id} onClick={()=>openEdit(g)}
+                        style={{width:"100%",textAlign:"left",background:C.surfaceUp,border:`1px solid ${C.bdrUp}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div>
+                          <div style={{color:C.text,fontWeight:600,fontSize:15}}>{g.name}</div>
+                          <div style={{display:"flex",gap:5,marginTop:4}}>
+                            {g.isVIP
+                              ?<span style={{fontSize:10,color:C.gold,fontFamily:"monospace"}}>⭐ VIP — All Days</span>
+                              :[1,2,3].map(d=>(g.days||[]).includes(d)?<span key={d} style={{fontSize:10,padding:"1px 6px",borderRadius:4,background:C.blueDim,color:C.blue,fontFamily:"monospace"}}>D{d}</span>:null)
+                            }
+                          </div>
+                        </div>
+                        <span style={{color:C.muted,fontSize:18}}>›</span>
+                      </button>
+                    ))}
+                  </div>;
+              })()}
+              {editGuest&&(
+                <div style={{background:C.surfaceUp,border:`1px solid ${C.bdrUp}`,borderRadius:12,padding:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <div style={{fontWeight:700,fontSize:16,color:C.text}}>{editGuest.name}</div>
+                    <button onClick={()=>{setEditGuest(null);setGuestSearch("");}} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
+                  </div>
+                  <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginBottom:8}}>ACCESS DAYS</div>
+                  <div style={{display:"flex",gap:7,marginBottom:12}}>
+                    {[1,2,3].map(d=>{
+                      const on=editDays.includes(d);
+                      return(
+                        <button key={d} style={{...S.dayBtn(on),flex:1,opacity:editVIP?.5:1}}
+                          onClick={()=>{if(editVIP)return;setEditDays(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d]);}}>
+                          DAY {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                    <input type="checkbox" id="evip" checked={editVIP} onChange={e=>{setEditVIP(e.target.checked);if(e.target.checked)setEditDays([1,2,3]);}} style={{width:16,height:16,accentColor:C.gold}}/>
+                    <label htmlFor="evip" style={{color:C.gold,fontSize:13,cursor:"pointer"}}>⭐ VIP — All Days Access</label>
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button style={{...S.btn(editSaved?"#005a30":C.green),flex:2}} onClick={saveGuestEdit}>
+                      {editSaved?"✓ Saved!":"Save Changes"}
+                    </button>
+                    <button style={{...S.btn(C.red,"#fff"),flex:1}} onClick={()=>deleteGuest(editGuest)}>
+                      🗑 Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={S.card({marginBottom:14})}>
               <div style={{fontSize:10,color:C.muted,letterSpacing:2,fontFamily:"monospace",marginBottom:10}}>ADD MANUALLY</div>
               <input style={S.input()} placeholder="Full name" value={mName} onChange={e=>setMName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addManual()}/>
